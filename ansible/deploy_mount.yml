@@ -1,0 +1,40 @@
+- hosts: all
+  remote_user: <user>
+  become: true
+  become_method: sudo
+  tasks:
+    - name: Create Directory In Remote Machine
+      file:
+          path: <Directory>
+          state: directory
+
+    - name: Disable Strict Checking
+      command: sed -i 's/#   StrictHostKeyChecking\ ask/StrictHostKeyChecking\ no/g' /etc/ssh/ssh_config
+      notify:
+          - Change Permission
+
+  handlers:
+  - name: Change Permission
+    file:
+        path: <Directory>
+        owner: <user>
+        group: <user>
+        state: directory
+    notify:
+        - Add mount point
+
+  - name: Add mount point
+    mount:
+        src: <Server-DNS>
+        name: <Directory>
+        fstype: fuse.sshfs
+        opts: _netdev,user,idmap=user,transform_symlinks,identityfile=/home/deepcompute/.ssh/id_rsa,allow_other,default_permissions,reconnect,ServerAliveInterval=20,ServerAliveCountMax=5,uid=1000,gid=1000
+        state: mounted
+    notify:
+        - Enable Strict Checking
+
+  - name: Enable Strict Checking
+      command: sed -i 's/StrictHostKeyChecking no/#   StrictHostKeyChecking\ ask/g' /etc/ssh/ssh_config
+      notify:
+          - Change Permission
+
